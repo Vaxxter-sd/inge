@@ -41,9 +41,22 @@ def nuevo_lead():
         tipo_escuela = data.get('tipo_escuela')
         fecha = datetime.now()
 
-        # Guardar en base de datos
+        # Conectar a la base de datos
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
+
+        # Crear la tabla 'leads' si no existe (antes de insertar)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS leads (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(100) NOT NULL,
+                correo VARCHAR(100) NOT NULL,
+                tipo_escuela VARCHAR(50) NOT NULL,
+                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Insertar el lead
         sql = "INSERT INTO leads (nombre, correo, tipo_escuela, fecha_registro) VALUES (%s, %s, %s, %s)"
         valores = (nombre, correo, tipo_escuela, fecha)
         cursor.execute(sql, valores)
@@ -51,13 +64,12 @@ def nuevo_lead():
         cursor.close()
         conn.close()
 
-        # Enviar correo de confirmación con diseño HTML
+        # Enviar correo de confirmación
         msg = EmailMessage()
         msg['Subject'] = f'¡Gracias por contactarnos, {nombre}! - SEscolar.ce'
         msg['From'] = SMTP_CONFIG['user']
         msg['To'] = correo
 
-        # Texto plano (alternativo)
         texto_plano = f"""Hola {nombre},
 
 Gracias por tu interés en SEscolar.ce.
@@ -68,7 +80,6 @@ Saludos cordiales,
 Equipo SEscolar.ce
 """
 
-        # HTML personalizado
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -149,7 +160,7 @@ Equipo SEscolar.ce
             <p>Hola <strong>{nombre}</strong>,</p>
             <p>¡Gracias por ponerte en contacto con <strong>SEscolar.ce</strong>! Hemos recibido tu solicitud de información para <strong>{tipo_escuela}</strong>.</p>
             <div class="highlight">
-                 Tu registro se ha completado exitosamente.
+                ✅ Tu registro se ha completado exitosamente.
             </div>
             <p>Un asesor especializado se comunicará contigo en las próximas horas para ofrecerte una demostración personalizada y resolver todas tus dudas sobre nuestra plataforma de gestión educativa.</p>
             <p>Mientras tanto, puedes conocer más sobre nuestras soluciones visitando nuestro sitio web.</p>
@@ -181,16 +192,6 @@ Equipo SEscolar.ce
     except Exception as e:
         print('Error:', e)
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
-        
-        cursor.execute("""
-    CREATE TABLE IF NOT EXISTS leads (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        nombre VARCHAR(100) NOT NULL,
-        correo VARCHAR(100) NOT NULL,
-        tipo_escuela VARCHAR(50) NOT NULL,
-        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-""")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
