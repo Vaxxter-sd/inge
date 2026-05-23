@@ -181,6 +181,16 @@ Equipo SEscolar.ce
     except Exception as e:
         print('Error:', e)
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
+        
+        cursor.execute("""
+    CREATE TABLE IF NOT EXISTS leads (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        correo VARCHAR(100) NOT NULL,
+        tipo_escuela VARCHAR(50) NOT NULL,
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+""")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
