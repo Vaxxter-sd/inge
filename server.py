@@ -12,10 +12,11 @@ CORS(app)
 # CONFIGURACIÓN DE LA BASE DE DATOS
 # =============================================
 DB_CONFIG = {
-    'host': 'localhost',
+    'host': 'kodama.proxy.rlwy.net',
     'user': 'root',
-    'password': 'root',
-    'database': 'sistema_escolar_db'
+    'password': 'uAWtpgQEHbDcTFiJOmxratreEnpIJXjb',
+    'database': 'railway',
+    'port': 38086
 }
 
 # =============================================
