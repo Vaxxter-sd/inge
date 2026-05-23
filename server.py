@@ -9,7 +9,7 @@ app = Flask(__name__)
 CORS(app)
 
 # =============================================
-# CONFIGURACIÓN DE LA BASE DE DATOS
+# CONFIGURACIÓN DE LA BASE DE DATOS (Railway)
 # =============================================
 DB_CONFIG = {
     'host': 'kodama.proxy.rlwy.net',
@@ -45,7 +45,7 @@ def nuevo_lead():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Crear la tabla 'leads' si no existe (antes de insertar)
+        # Crear la tabla 'leads' si no existe (esto debe ir antes del INSERT)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS leads (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -56,7 +56,7 @@ def nuevo_lead():
             )
         """)
 
-        # Insertar el lead
+        # Insertar el nuevo lead
         sql = "INSERT INTO leads (nombre, correo, tipo_escuela, fecha_registro) VALUES (%s, %s, %s, %s)"
         valores = (nombre, correo, tipo_escuela, fecha)
         cursor.execute(sql, valores)
@@ -64,12 +64,13 @@ def nuevo_lead():
         cursor.close()
         conn.close()
 
-        # Enviar correo de confirmación
+        # Enviar correo de confirmación con diseño HTML
         msg = EmailMessage()
         msg['Subject'] = f'¡Gracias por contactarnos, {nombre}! - SEscolar.ce'
         msg['From'] = SMTP_CONFIG['user']
         msg['To'] = correo
 
+        # Texto plano (alternativo)
         texto_plano = f"""Hola {nombre},
 
 Gracias por tu interés en SEscolar.ce.
@@ -80,6 +81,7 @@ Saludos cordiales,
 Equipo SEscolar.ce
 """
 
+        # HTML personalizado
         html = f"""
 <!DOCTYPE html>
 <html>
@@ -160,7 +162,7 @@ Equipo SEscolar.ce
             <p>Hola <strong>{nombre}</strong>,</p>
             <p>¡Gracias por ponerte en contacto con <strong>SEscolar.ce</strong>! Hemos recibido tu solicitud de información para <strong>{tipo_escuela}</strong>.</p>
             <div class="highlight">
-                ✅ Tu registro se ha completado exitosamente.
+                <strong>✓ Tu registro se ha completado exitosamente.</strong>
             </div>
             <p>Un asesor especializado se comunicará contigo en las próximas horas para ofrecerte una demostración personalizada y resolver todas tus dudas sobre nuestra plataforma de gestión educativa.</p>
             <p>Mientras tanto, puedes conocer más sobre nuestras soluciones visitando nuestro sitio web.</p>
@@ -193,5 +195,8 @@ Equipo SEscolar.ce
         print('Error:', e)
         return jsonify({'status': 'error', 'mensaje': str(e)}), 500
 
+# =============================================
+# PUNTO DE ENTRADA (ejecuta el servidor)
+# =============================================
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
