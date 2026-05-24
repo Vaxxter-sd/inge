@@ -4,20 +4,21 @@ import mysql.connector
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime
+import threading   # Opcional, para no bloquear si quieres
 
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURACIÓN DE LA BASE DE DATOS (valores directos de Railway)
+# CONFIGURACIÓN DE LA BASE DE DATOS (Railway)
 DB_CONFIG = {
-    'host': 'mysql.railway.internal',   # ← cámbialo por el MYSQLHOST de tu BD
-    'user': 'root',                    # ← MYSQLUSER
-    'password': 'uAWtpgQEHbDcTFiJOmxratreEnpIJXjb',  # ← MYSQLPASSWORD
-    'database': 'railway',             # ← MYSQLDATABASE
-    'port': 38086                      # ← MYSQLPORT
+    'host': 'mysql.railway.internal',
+    'user': 'root',
+    'password': 'uAWtpgQEHbDcTFiJOmxratreEnpIJXjb',
+    'database': 'railway',
+    'port': 38086
 }
 
-# CONFIGURACIÓN DEL CORREO
+# CONFIGURACIÓN DEL CORREO (Gmail)
 SMTP_CONFIG = {
     'server': 'smtp.gmail.com',
     'port': 587,
@@ -37,36 +38,32 @@ def nuevo_lead():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
-        # Crear tabla si no existe
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS leads (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nombre VARCHAR(100) NOT NULL,
-                correo VARCHAR(100) NOT NULL,
-                tipo_escuela VARCHAR(50) NOT NULL,
-                fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        # Verificar si el correo ya existe (evitar duplicados)
+        cursor.execute("SELECT id FROM leads WHERE correo = %s", (correo,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'status': 'error', 'mensaje': 'Este correo ya está registrado.'}), 400
 
-        # Insertar lead
+        # Insertar lead (la tabla ya existe, no se crea)
         sql = "INSERT INTO leads (nombre, correo, tipo_escuela, fecha_registro) VALUES (%s, %s, %s, %s)"
         cursor.execute(sql, (nombre, correo, tipo_escuela, fecha))
         conn.commit()
         cursor.close()
         conn.close()
 
-        # Enviar correo
+        # Enviar correo (puedes dejarlo así o ponerlo en hilo para que no bloquee)
         msg = EmailMessage()
         msg['Subject'] = f'¡Gracias por contactarnos, {nombre}! - SEscolar.ce'
         msg['From'] = SMTP_CONFIG['user']
         msg['To'] = correo
-        msg.set_content(f'Hola {nombre},\nGracias por tu interés. En breve te contactaremos.')
+        msg.set_content(f'Hola {nombre},\nGracias por tu interés. En breve te contactaremos.\n\nSi no ves este correo en tu bandeja de entrada, revisa tu carpeta de spam.')
         with smtplib.SMTP(SMTP_CONFIG['server'], SMTP_CONFIG['port']) as smtp:
             smtp.starttls()
             smtp.login(SMTP_CONFIG['user'], SMTP_CONFIG['password'])
             smtp.send_message(msg)
 
-        return jsonify({'status': 'ok', 'mensaje': 'Lead guardado'}), 200
+        return jsonify({'status': 'ok', 'mensaje': 'Lead guardado y correo enviado'}), 200
 
     except Exception as e:
         print('Error:', e)
